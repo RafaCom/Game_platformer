@@ -1,4 +1,4 @@
-""" Разобраться с жизнями """
+""" Должны вылетать из бомб монетки """
 
 import math
 import random
@@ -60,13 +60,14 @@ MAX_FADE_TIME = 1.5
 
 simple_level = False
 
-
 class MyGame(arcade.View):
     def __init__(self):
         super().__init__()
 
+        self.music_play = False
         self.spike_1 = None
         self.spike = None
+        self.enemy_list = None
         self.window.set_mouse_visible(False)
 
         self.burst_list = []
@@ -83,6 +84,8 @@ class MyGame(arcade.View):
 
         self.life = 2
         self.life_text = None
+
+        self.music_text = None
 
         self.manager = arcade.gui.UIManager()
         self.manager.enable()
@@ -133,6 +136,7 @@ class MyGame(arcade.View):
         self.scene = arcade.Scene()
 
         map_name = ':resources:tiled_maps/map_with_ladders.json'
+        map_name_with_bombs = ':resources:tiled_maps/level_1.json'
 
         tile_map = arcade.load_tilemap(map_name, SPRITE_SCALING_TILES)
 
@@ -141,23 +145,39 @@ class MyGame(arcade.View):
         self.scene.add_sprite_list('Moving Platforms', sprite_list=tile_map.sprite_lists['Moving Platforms'])
         self.scene.add_sprite_list('Coins', sprite_list=tile_map.sprite_lists['Coins'])
 
+        tile_map_with_bombs = arcade.load_tilemap(map_name_with_bombs, SPRITE_SCALING_TILES)
+
+
         self.player_sprite = Player()
         self.scene.add_sprite('Player', self.player_sprite)
 
-        # self.tablet = arcade.Sprite(':resources:images/tiles/switchRed.png')
-        # self.tablet.center_x = 1350
-        # self.tablet.center_y = 128
-        # self.scene.add_sprite('Platforms', self.tablet)
         if not simple_level:
-            self.spike_1 = arcade.Sprite(':resources:images/tiles/spikes.png', scale=0.7)
-            self.spike_1.center_x = 770
-            self.spike_1.center_y = 685
-            self.scene.add_sprite('Enemy', self.spike_1)
+            # self.spike_1 = arcade.Sprite(':resources:images/tiles/spikes.png', scale=0.7)
+            # self.spike_1.center_x = 770
+            # self.spike_1.center_y = 685
+            # self.scene.add_sprite('Enemy', self.spike_1)
+            #
+            # self.spike = arcade.Sprite(':resources:images/tiles/spikes.png', scale=0.7)
+            # self.spike.center_x = 408
+            # self.spike.center_y = 108
+            # self.scene.add_sprite('Enemy', self.spike)
 
-            self.spike = arcade.Sprite(':resources:images/tiles/spikes.png', scale=0.7)
-            self.spike.center_x = 408
-            self.spike.center_y = 108
-            self.scene.add_sprite('Enemy', self.spike)
+            self.scene.add_sprite_list('Enemy', sprite_list=tile_map_with_bombs.sprite_lists['Bombs'])
+
+            # self.scene["Enemy"][0].center_x = 400
+            # self.scene["Enemy"][0].center_y = 685
+
+            self.scene["Enemy"][1].center_x = 408
+            self.scene["Enemy"][1].center_y = 96
+
+            self.scene["Enemy"][2].center_x = 776
+            self.scene["Enemy"][2].center_y = 672
+
+            # self.enemy_list = arcade.SpriteList()
+            # self.enemy_list.append(self.spike)
+            # self.enemy_list.append(self.spike_1)
+            # self.scene.add_sprite_list('Enemy', self.enemy_list)
+
 
         self.block = arcade.Sprite(':resources:images/tiles/dirtHalf.png', scale=0.5)
         self.block.center_x = 800
@@ -183,7 +203,10 @@ class MyGame(arcade.View):
                                             body_type=arcade.PymunkPhysicsEngine.STATIC)
 
         self.sound = arcade.load_sound('music.wav')
-        self.music = arcade.play_sound(self.sound, volume=0.1, looping=True)
+        if not self.music_play:
+            # self.music = arcade.play_sound(self.sound, volume=0.1, looping=True)
+            self.music = self.sound.play(volume=0.1, loop=True)
+            self.music_play = True
         self.sound_game_over = arcade.load_sound(':resources:sounds/gameover2.wav')
         self.sound_win = arcade.load_sound(':resources:sounds/upgrade1.wav')
         self.sound_jump = arcade.load_sound(':resources:sounds/jump1.wav')
@@ -199,13 +222,18 @@ class MyGame(arcade.View):
         self.scene.draw()
         # self.light_layer.draw(ambient_color=AMBIENT_COLOR)
 
+        self.music_text = arcade.gui.UILabel(20, 0 ,
+                                             text=str(self.score), font_size=20, text_color=arcade.color.YELLOW)
+
         self.score_text = arcade.gui.UILabel(20, HEIGHT - 50,
                                              text=str(self.score), font_size=20, text_color=arcade.color.YELLOW)
-        self.life_text = arcade.gui.UILabel(WIDTH - 30, HEIGHT - 50,
-                                            text=str(self.life), font_size=20, text_color=arcade.color.RED)
+        if not simple_level:
+            self.life_text = arcade.gui.UILabel(WIDTH - 130, HEIGHT - 50,
+                                                text=f"Жизнь: {str(self.life)}", font_size=20, text_color=arcade.color.RED)
+            self.manager.add(self.life_text)
 
         self.manager.add(self.score_text)
-        self.manager.add(self.life_text)
+
 
         self.manager.draw()
         self.manager.remove(self.score_text)
@@ -275,7 +303,7 @@ class MyGame(arcade.View):
                 else:
                     self.physics_engine.set_friction(self.player_sprite, 1.0)
 
-                self.center_camera_to_player()
+                # self.center_camera_to_player()
 
                 for coin in self.scene['Coins']:
                     collision = arcade.check_for_collision(self.player_sprite, coin)
@@ -285,46 +313,46 @@ class MyGame(arcade.View):
                         self.collision_coin(coin.center_x, coin.center_y)
                         coin.kill()
 
-                # for bomb in self.scene['Enemy']:
-                #     collision_bomb = arcade.check_for_collision(self.player_sprite, bomb)
-                #     if collision_bomb:
-                #         self.collision_coin(WIDTH - 20, HEIGHT)
-                #         self.life -= 1
-                #         if self.life != 0:
-                #             self.trampoline.center_x = bomb.center_x
-                #             self.trampoline.center_y = bomb.center_y
-                #             self.scene.add_sprite('Trampoline', self.trampoline)
-                #         bomb.kill()
-                #         arcade.play_sound(self.collision_bomb, volume=0.5)
-
-                for trampoline in self.scene['Trampoline']:
-                    collision_trampoline = arcade.check_for_collision(self.player_sprite, trampoline)
-                    if collision_trampoline:
-                        impulse = (0, PLAYER_JUMP_IMPULSE * 1.0)
-                        self.physics_engine.apply_impulse(self.player_sprite, impulse)
+                # for trampoline in self.scene['Trampoline']:
+                #     collision_trampoline = arcade.check_for_collision(self.player_sprite, trampoline)
+                #     if collision_trampoline:
+                #         impulse = (0, PLAYER_JUMP_IMPULSE * 1.0)
+                #         self.physics_engine.apply_impulse(self.player_sprite, impulse)
 
                 if not simple_level:
-                    collision = arcade.check_for_collision(self.player_sprite, self.spike)
-                    if collision:
-                        arcade.play_sound(self.sound_win)
-                        arcade.stop_sound(self.music)
-                        self.player_sprite.kill()
-                        self.status = False
-                        self.game_over.setup()
-                        self.window.show_view(self.game_over)
+                    # for spike in self.scene['Enemy']:
+                    #     collision = arcade.check_for_collision(self.player_sprite, self.spike)
+                    #     if collision:
+                    #         self.collision_coin(WIDTH - 20, HEIGHT)
+                    #         self.life -= 1
+                    #         self.spike.kill()
+                    #         arcade.play_sound(self.collision_bomb, volume=0.5)
+                    #
+                    #     collision = arcade.check_for_collision(self.player_sprite, self.spike_1)
+                    #     if collision:
+                    #         self.collision_coin(WIDTH - 20, HEIGHT)
+                    #         self.life -= 1
+                    #         self.spike_1.kill()
+                    #         arcade.play_sound(self.collision_bomb, volume=0.5)
 
-                    collision = arcade.check_for_collision(self.player_sprite, self.spike_1)
-                    if collision:
-                        arcade.play_sound(self.sound_win)
-                        arcade.stop_sound(self.music)
-                        self.player_sprite.kill()
-                        self.status = False
-                        self.game_over.setup()
-                        self.window.show_view(self.game_over)
+                        for bomb in self.scene['Enemy']:
+                            collision_bomb = arcade.check_for_collision(self.player_sprite, bomb)
+                            if collision_bomb:
+                                self.collision_coin(WIDTH - 20, HEIGHT)
+                                self.life -= 1
+                                self.collision_coin(bomb.center_x, bomb.center_y)
+                                # if self.life != 0:
+                                #     self.trampoline.center_x = bomb.center_x
+                                #     self.trampoline.center_y = bomb.center_y
+                                #     self.scene.add_sprite('Trampoline', self.trampoline)
+                                bomb.kill()
+                                arcade.play_sound(self.collision_bomb, volume=0.5)
 
                 if self.player_sprite.bottom <= 50:
-                    arcade.play_sound(self.sound_win)
-                    arcade.stop_sound(self.music)
+                    arcade.play_sound(self.sound_game_over)
+                    if self.music_play:
+                        arcade.stop_sound(self.music)
+                        self.music_play = False
                     self.player_sprite.kill()
                     self.status = False
                     self.game_over.setup()
@@ -337,14 +365,18 @@ class MyGame(arcade.View):
                         self.burst_list.remove(burst)
 
             else:
-                arcade.stop_sound(self.music)
+                if self.music_play:
+                    arcade.stop_sound(self.music)
+                    self.music_play = False
                 arcade.play_sound(self.sound_game_over, volume=0.3)
                 self.game_over.setup()
                 self.window.show_view(self.game_over)
 
         else:
             arcade.play_sound(self.sound_win)
-            arcade.stop_sound(self.music)
+            if self.music_play:
+                arcade.stop_sound(self.music)
+                self.music_play = False
             self.player_sprite.kill()
             self.status = False
             self.game_win.setup()
@@ -365,15 +397,19 @@ class MyGame(arcade.View):
             elif symbol == arcade.key.DOWN or symbol == arcade.key.S:
                 self.down_pressed = True
             elif symbol == arcade.key.ESCAPE:
-                arcade.stop_sound(self.music)
+                if self.music_play:
+                    arcade.stop_sound(self.music)
+                    self.music_play = False
                 menu_view = MenuView()
                 self.window.show_view(menu_view)
                 menu_view.setup()
-
-            # if symbol == arcade.key.ESCAPE:
-            #     pause = PauseView(self)
-            #     pause.setup()
-            #     self.window.show_view(pause)
+            elif symbol == arcade.key.SPACE:
+                if self.music_play:
+                    self.music.pause()
+                    self.music_play = False
+                else:
+                    self.music.play()
+                    self.music_play = True
 
     def on_key_release(self, symbol, modifiers):
         if self.status:
@@ -382,16 +418,16 @@ class MyGame(arcade.View):
             elif symbol == arcade.key.RIGHT or symbol == arcade.key.D:
                 self.right_pressed = False
 
-    def center_camera_to_player(self):
-        window_center_x = self.player_sprite.center_x - (self.camera.viewport_width / 2)
-        window_center_y = self.player_sprite.center_y - (self.camera.viewport_height / 2)
-
-        if window_center_x < 0:
-            window_center_x = 0
-        if window_center_y < 0:
-            window_center_y = 0
-        player_centered = window_center_x, window_center_y
-        self.camera.move_to(player_centered)
+    # def center_camera_to_player(self):
+    #     window_center_x = self.player_sprite.center_x - (self.camera.viewport_width / 2)
+    #     window_center_y = self.player_sprite.center_y - (self.camera.viewport_height / 2)
+    #
+    #     if window_center_x < 0:
+    #         window_center_x = 0
+    #     if window_center_y < 0:
+    #         window_center_y = 0
+    #     player_centered = window_center_x, window_center_y
+    #     self.camera.move_to(player_centered)
 
 
 class Player(arcade.Sprite):
@@ -524,9 +560,6 @@ class MenuView(arcade.View):
         self.manager.draw()
 
 
-# class PauseView(arcade.View):
-
-
 class GameOverView(arcade.View):
     def __init__(self):
         super().__init__()
@@ -577,7 +610,7 @@ class GameOverView(arcade.View):
         self.window.set_mouse_visible(True)
 
     def on_show_view(self):
-        arcade.set_background_color(arcade.color.BLUE_GRAY)
+        arcade.set_background_color(arcade.color.ANTIQUE_BRASS)
         arcade.set_viewport(0, self.window.width, 0, self.window.height)
 
     def on_draw(self):
