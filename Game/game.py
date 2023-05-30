@@ -358,11 +358,15 @@ class MyGame(arcade.View):
                 # self.center_camera_to_player()
 
                 for coin in self.scene['Coins']:
-                    # print(coin.bottom)
-                    # if coin.left <= 0:
-                    #     coin.left = 0
-                    # if coin.bottom <= 64:
-                    #     coin.bottom = 64
+                    if coin.bottom < 0:
+                        arcade.play_sound(self.sound_game_over)
+                        if self.music_play:
+                            arcade.stop_sound(self.music)
+                            self.music_play = False
+                        self.player_sprite.kill()
+                        self.status = False
+                        self.game_over.setup()
+                        self.window.show_view(self.game_over)
                     collision = arcade.check_for_collision(self.player_sprite, coin)
                     if collision:
                         self.score += 1
