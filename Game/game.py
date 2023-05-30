@@ -1,4 +1,9 @@
-""" Должны вылетать из бомб монетки """
+""" Вернуть взрывы монеток из бомбы как в начале (+ от 1 до 100 или просто + 100 в высоту, по Х от 1 до 10 и тд),
+    чтобы взлетали далеко вверх,
+    или доработать то, что есть;
+    Проверить, исчезают ли монетки со временем (можно оставить как фишку)
+    Проверить все условия ТЗ перед сдачей
+ """
 
 import math
 import random
@@ -57,6 +62,10 @@ AMBIENT_COLOR = (30, 30, 30)
 PARTICLE_COUNT = 300
 MIN_FADE_TIME = .25
 MAX_FADE_TIME = 1.5
+
+BULLET_MOVE_FORCE = 2000
+BULLET_MASS = 0.1
+BULLET_GRAVITY = 1000
 
 simple_level = False
 
@@ -216,6 +225,17 @@ class MyGame(arcade.View):
         self.trampoline = arcade.Sprite(':resources:images/tiles/switchGreen.png', 0.5)
         self.scene.add_sprite_list('Trampoline')
 
+        def wall_hit_handler(bullet_sprite, _wall_sprite, _arbiter, _space, _data):
+            bullet_sprite.remove_from_sprite_lists()
+
+        self.physics_engine.add_collision_handler("bullet", "wall", post_handler=wall_hit_handler)
+
+        def item_hit_handler(bullet_sprite, item_sprite, _arbiter, _space, _data):
+            bullet_sprite.remove_from_sprite_lists()
+            item_sprite.remove_from_sprite_lists()
+
+        self.physics_engine.add_collision_handler("bullet", "item", post_handler=item_hit_handler)
+
     def on_draw(self):
         self.clear()
         # with self.light_layer:
@@ -281,6 +301,38 @@ class MyGame(arcade.View):
         burst = Burst(buffer=buffer, vao=vao, start_time=time.time())
         self.burst_list.append(burst)
 
+    def burst_with_coins(self, x, y, x1, y1, position):
+        bullet = BulletSprite(":resources:images/items/coinGold.png", 0.5)
+
+
+        self.scene['Coins'].append(bullet)
+
+        start_x = x1
+        start_y = y1
+        bullet.position = position
+
+        dest_x = x
+        dest_y = y
+
+        x_diff = dest_x - start_x
+        y_diff = dest_y - start_y
+        angle = math.atan2(y_diff, x_diff)
+
+        size = max(self.player_sprite.width, self.player_sprite.height) / 2
+
+        bullet.center_x += size * math.cos(angle)
+        bullet.center_y += size * math.sin(angle)
+
+        bullet.angle = math.degrees(angle)
+
+        bullet_gravity = (0, -BULLET_GRAVITY)
+
+        self.physics_engine.add_sprite(bullet, mass=BULLET_MASS, damping=1.0, friction=0.6,
+                                       collision_type="bullet", gravity=bullet_gravity, elasticity=0.9)
+        force = (BULLET_MOVE_FORCE, 0)
+        self.physics_engine.apply_force(bullet, force)
+
+
     def update(self, delta_time: float):
         if self.score < 11:
             if self.status and self.life != 0 and self.player_sprite.top > 0:
@@ -306,6 +358,11 @@ class MyGame(arcade.View):
                 # self.center_camera_to_player()
 
                 for coin in self.scene['Coins']:
+                    # print(coin.bottom)
+                    # if coin.left <= 0:
+                    #     coin.left = 0
+                    # if coin.bottom <= 64:
+                    #     coin.bottom = 64
                     collision = arcade.check_for_collision(self.player_sprite, coin)
                     if collision:
                         self.score += 1
@@ -313,40 +370,28 @@ class MyGame(arcade.View):
                         self.collision_coin(coin.center_x, coin.center_y)
                         coin.kill()
 
-                # for trampoline in self.scene['Trampoline']:
-                #     collision_trampoline = arcade.check_for_collision(self.player_sprite, trampoline)
-                #     if collision_trampoline:
-                #         impulse = (0, PLAYER_JUMP_IMPULSE * 1.0)
-                #         self.physics_engine.apply_impulse(self.player_sprite, impulse)
-
                 if not simple_level:
-                    # for spike in self.scene['Enemy']:
-                    #     collision = arcade.check_for_collision(self.player_sprite, self.spike)
-                    #     if collision:
-                    #         self.collision_coin(WIDTH - 20, HEIGHT)
-                    #         self.life -= 1
-                    #         self.spike.kill()
-                    #         arcade.play_sound(self.collision_bomb, volume=0.5)
-                    #
-                    #     collision = arcade.check_for_collision(self.player_sprite, self.spike_1)
-                    #     if collision:
-                    #         self.collision_coin(WIDTH - 20, HEIGHT)
-                    #         self.life -= 1
-                    #         self.spike_1.kill()
-                    #         arcade.play_sound(self.collision_bomb, volume=0.5)
-
-                        for bomb in self.scene['Enemy']:
-                            collision_bomb = arcade.check_for_collision(self.player_sprite, bomb)
-                            if collision_bomb:
-                                self.collision_coin(WIDTH - 20, HEIGHT)
-                                self.life -= 1
-                                self.collision_coin(bomb.center_x, bomb.center_y)
-                                # if self.life != 0:
-                                #     self.trampoline.center_x = bomb.center_x
-                                #     self.trampoline.center_y = bomb.center_y
-                                #     self.scene.add_sprite('Trampoline', self.trampoline)
-                                bomb.kill()
-                                arcade.play_sound(self.collision_bomb, volume=0.5)
+                    for bomb in self.scene['Enemy']:
+                        collision_bomb = arcade.check_for_collision(self.player_sprite, bomb)
+                        if collision_bomb:
+                            self.collision_coin(WIDTH - 20, HEIGHT)
+                            self.life -= 1
+                            self.score -= 5
+                            self.collision_coin(bomb.center_x, bomb.center_y)
+                            if self.player_sprite.center_y > 150 and self.player_sprite.center_x < 500:
+                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x - (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
+                            else:
+                                self.burst_with_coins(bomb.center_x + (random.randint(1, 10)), bomb.center_y + (random.randint(1, 5)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x - (random.randint(1, 5)), bomb.center_y + (random.randint(1, 100)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x + (random.randint(1, 5)), bomb.center_y + (random.randint(1, 25)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x + (random.randint(1, 10)), bomb.center_y + (random.randint(1, 50)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(bomb.center_x + (random.randint(1, 5)), bomb.center_y + (random.randint(1, 25)), bomb.center_x, bomb.center_y, bomb.position)
+                            bomb.kill()
+                            arcade.play_sound(self.collision_bomb, volume=0.5)
 
                 if self.player_sprite.bottom <= 50:
                     arcade.play_sound(self.sound_game_over)
@@ -358,7 +403,6 @@ class MyGame(arcade.View):
                     self.game_over.setup()
                     self.window.show_view(self.game_over)
 
-                # self.player_light.position = self.player_sprite.position
                 temp_list = self.burst_list.copy()
                 for burst in temp_list:
                     if time.time() - burst.start_time > MAX_FADE_TIME:
@@ -494,6 +538,10 @@ class Player(arcade.Sprite):
             arcade.load_texture(filename, flipped_horizontally=True)
         ]
 
+class BulletSprite(arcade.Sprite):
+    def pymunk_moved(self, physics_engine, dx, dy, d_angle):
+        if self.center_x < -100:
+            self.remove_from_sprite_lists()
 
 @dataclass
 class Burst:
@@ -519,7 +567,14 @@ class MenuView(arcade.View):
 
         text = 'Соберите все монетки и флажки для победы!'
 
+        text_bomb = 'Успейте собрать монетки, если взорвется бомба!'
+
         ui_text_label = arcade.gui.UITextArea(text=text, width=920, height=60,
+                                              font_size=32,
+                                              font_name="Arial")
+        self.buttons_box_menu.add(ui_text_label.with_space_around(bottom=15))
+
+        ui_text_label = arcade.gui.UITextArea(text=text_bomb, width=995, height=60,
                                               font_size=32,
                                               font_name="Arial")
         self.buttons_box_menu.add(ui_text_label.with_space_around(bottom=15))
