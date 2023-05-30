@@ -301,15 +301,15 @@ class MyGame(arcade.View):
         burst = Burst(buffer=buffer, vao=vao, start_time=time.time())
         self.burst_list.append(burst)
 
-    def burst_with_coins(self, x, y, x1, y1, position):
+    def burst_with_coins(self, x, y):
         bullet = BulletSprite(":resources:images/items/coinGold.png", 0.5)
 
 
         self.scene['Coins'].append(bullet)
 
-        start_x = x1
-        start_y = y1
-        bullet.position = position
+        start_x = self.player_sprite.center_x
+        start_y = self.player_sprite.center_y
+        bullet.position = self.player_sprite.position
 
         dest_x = x
         dest_y = y
@@ -382,18 +382,18 @@ class MyGame(arcade.View):
                             self.life -= 1
                             self.score -= 5
                             self.collision_coin(bomb.center_x, bomb.center_y)
-                            if self.player_sprite.center_y > 150 and self.player_sprite.center_x < 500:
-                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x - (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x + (random.randrange(-10, -15, -14)), bomb.center_y + (random.randint(1, 2)), bomb.center_x, bomb.center_y, bomb.position)
+                            if self.player_sprite.center_y > 150:
+                                self.burst_with_coins(random.randrange(-100, -1000, -900), random.randint(100, 500))
+                                self.burst_with_coins(random.randrange(-100, -500, -400), random.randint(100, 1000))
+                                self.burst_with_coins(random.randrange(-100, -500, -400), random.randint(100, 250))
+                                self.burst_with_coins(random.randrange(-100, -1000, -900), random.randint(100, 500))
+                                self.burst_with_coins(random.randrange(-100, -500, -400), random.randint(100, 250))
                             else:
-                                self.burst_with_coins(bomb.center_x + (random.randint(1, 10)), bomb.center_y + (random.randint(1, 5)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x - (random.randint(1, 5)), bomb.center_y + (random.randint(1, 100)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x + (random.randint(1, 5)), bomb.center_y + (random.randint(1, 25)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x + (random.randint(1, 10)), bomb.center_y + (random.randint(1, 50)), bomb.center_x, bomb.center_y, bomb.position)
-                                self.burst_with_coins(bomb.center_x + (random.randint(1, 5)), bomb.center_y + (random.randint(1, 25)), bomb.center_x, bomb.center_y, bomb.position)
+                                self.burst_with_coins(random.randint(1, 10), random.randint(1, 5))
+                                self.burst_with_coins(random.randint(1, 5), random.randint(1, 100))
+                                self.burst_with_coins(random.randint(1, 5), random.randint(1, 25))
+                                self.burst_with_coins(random.randint(1, 10), random.randint(1, 50))
+                                self.burst_with_coins(random.randint(1, 5), random.randint(1, 25))
                             bomb.kill()
                             arcade.play_sound(self.collision_bomb, volume=0.5)
 
@@ -669,7 +669,8 @@ class GameOverView(arcade.View):
         self.window.set_mouse_visible(True)
 
     def on_show_view(self):
-        arcade.set_background_color(arcade.color.ANTIQUE_BRASS)
+        # arcade.set_background_color(arcade.color.ANTIQUE_BRASS)
+        arcade.set_background_color((random.randint(10, 256), random.randint(10, 256), random.randint(10, 256)))
         arcade.set_viewport(0, self.window.width, 0, self.window.height)
 
     def on_draw(self):
@@ -727,7 +728,8 @@ class GameWin(arcade.View):
         self.window.set_mouse_visible(True)
 
     def on_show_view(self):
-        arcade.set_background_color(arcade.color.BLUE_GRAY)
+        # arcade.set_background_color(arcade.color.BLUE_GRAY)
+        arcade.set_background_color((random.randint(0, 240), random.randint(0, 240), random.randint(10, 240)))
         arcade.set_viewport(0, self.window.width, 0, self.window.height)
 
     def on_draw(self):
